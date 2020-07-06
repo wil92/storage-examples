@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+    <title>Storage Examples</title>
+</head>
+<body>
+<hr>
+<div>
+    <h1>Session Storage</h1>
+    <input id="session-storage-data" type="text">
+    <button onclick="saveSessionStorage()">save</button>
+    <button onclick="clearSessionStorage()">clear</button>
+</div>
+<hr>
+<div>
+    <h1>Local Storage</h1>
+    <input id="local-storage-data" type="text">
+    <button onclick="saveLocalStorage()">save</button>
+    <button onclick="clearLocalStorage()">clear</button>
+</div>
+<hr>
+<div>
+    <h1>IndexDB</h1>
+    <input id="indexdb-data" type="text">
+    <button onclick="saveIndexDBStorage()">save</button>
+    <button onclick="clearIndexDBStorage()">clear</button>
+</div>
+<hr>
+<script type="application/javascript">
+    const sessionValue = document.getElementById('session-storage-data');
+    const localValue = document.getElementById('local-storage-data');
+    const indexDBValue = document.getElementById('indexdb-data');
+
+    const request = window.indexedDB.open("MyTestDatabase", 1);
+    let db;
+
+    // Session Storage example
+    function saveSessionStorage() {
+        sessionStorage.setItem('input', sessionValue.value);
+    }
+
+    function clearSessionStorage() {
+        sessionStorage.clear();
+        sessionValue.value = '';
+    }
+
+    // Local Storage example
+    function saveLocalStorage() {
+        localStorage.setItem('input', localValue.value);
+    }
+
+    function clearLocalStorage() {
+        localStorage.clear();
+        localValue.value = '';
+    }
+
+    // IndexDB example
+    function saveIndexDBStorage() {
+        const transaction = db.transaction(['data'], 'readwrite');
+        const objectStore = transaction.objectStore('data');
+        const request = objectStore.get('input');
+        request.onsuccess = () => {
+            if (request.result) {
+                const data = request.result;
+                data.value = indexDBValue.value;
+                objectStore.put(data);
+            } else {
+                objectStore.add({key: 'input', value: indexDBValue.value});
+            }
+        };
+    }
+
+    function clearIndexDBStorage() {
+        const transaction = db.transaction(['data'], 'readwrite');
+        const objectStore = transaction.objectStore('data');
+        objectStore.delete('input');
+        indexDBValue.value = '';
+    }
+
+    (() => {
+        sessionValue.value = sessionStorage.getItem('input') || '';
+
+        localValue.value = localStorage.getItem('input') || '';
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            const objectStore = db.createObjectStore("data", {keyPath: "key"});
+            objectStore.createIndex("value", "value");
+        };
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            const dataTransaction = db.transaction(['data'], 'readwrite');
+            dataTransaction.objectStore('data').get('input').onsuccess = (event) => {
+                indexDBValue.value = (event.target.result && event.target.result.value) || '';
+            };
+        };
+    })();
+</script>
+</body>
+</html>
